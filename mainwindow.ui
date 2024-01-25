@@ -37,6 +37,20 @@
          </widget>
         </item>
         <item>
+         <widget class="QComboBox" name="comboBox">
+          <item>
+           <property name="text">
+            <string>zero</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>pole</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item>
          <widget class="QPushButton" name="btn_clr_zero">
           <property name="text">
            <string>clear all zeros</string>
