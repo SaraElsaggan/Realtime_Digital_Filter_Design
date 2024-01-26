@@ -23,29 +23,15 @@
       <item>
        <layout class="QVBoxLayout" name="verticalLayout">
         <item>
-         <widget class="QPushButton" name="btn_add_zero">
-          <property name="text">
-           <string>add zero</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="btn_add_pole">
-          <property name="text">
-           <string>add_pole</string>
-          </property>
-         </widget>
-        </item>
-        <item>
          <widget class="QComboBox" name="comboBox">
           <item>
            <property name="text">
-            <string>zero</string>
+            <string>add zero</string>
            </property>
           </item>
           <item>
            <property name="text">
-            <string>pole</string>
+            <string>add pole</string>
            </property>
           </item>
          </widget>
