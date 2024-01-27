@@ -2,15 +2,13 @@ from scipy import signal
 
 from PyQt5.QtCore import Qt
 
-from matplotlib.patches import ConnectionPatch
-from matplotlib.lines import Line2D
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-from PyQt5.QtWidgets import  QApplication, QMainWindow, QShortcut, QFileDialog , QSplitter , QFrame , QSlider , QMenu 
+from PyQt5.QtWidgets import  QApplication, QMainWindow, QShortcut, QMenu 
 from scipy.signal import spectrogram
 from scipy.signal import resample
 import sys
@@ -332,7 +330,7 @@ class MyWindow(QMainWindow):
                 pole.create_conjgate()
                 self.poles_conj.append(pole.conj)
         # self.response_plot()  
-        self.response_plot_()  
+        self.response_plot()  
     def remove_all_cong(self):
         # pass
         for zero in self.zeros:
@@ -357,7 +355,7 @@ class MyWindow(QMainWindow):
         self.poles_conj.clear()
         self.pls.figure.canvas.draw()
         # self.response_plot()  
-        self.response_plot_()  
+        self.response_plot()  
 
         # for zero , pole in zip(self.zeros , self.poles):
 
@@ -431,7 +429,7 @@ class MyWindow(QMainWindow):
             # self.points.append((x , y))
             # print(self.points)
             self.response_plot()
-            # self.response_plot_()
+            # self.response_plot()
             self.print()
 
     def print(self):
@@ -472,7 +470,7 @@ class MyWindow(QMainWindow):
         self.zeros.clear()
         self.zeros_conj.clear()
         self.pls.figure.canvas.draw()
-        self.response_plot_()
+        self.response_plot()
         # self.clear_mag_phase_grph()
         
         
@@ -488,7 +486,7 @@ class MyWindow(QMainWindow):
         self.poles_conj.clear()
         self.pls.figure.canvas.draw()
         # self.clear_mag_phase_grph()
-        self.response_plot_()
+        self.response_plot()
         
         
     def clear_all(self):
