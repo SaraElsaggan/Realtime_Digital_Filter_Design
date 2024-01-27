@@ -152,6 +152,7 @@ class DraggablePoint:
             if contains:
                 self.delete_point()
         self.parent.response_plot()
+        # self.parent.response_plot_()
         
                 
                 
@@ -172,16 +173,23 @@ class DraggablePoint:
             prev_data, xpress, ypress = self.press
             dx = event.xdata - xpress
             dy = event.ydata - ypress
-            self.x , self.y = (prev_data[0] + dx, prev_data[1] + dy)
+            # self.x , self.y = (prev_data[0] + dx, prev_data[1] + dy)
+            self.x , self.y = ((prev_data[0] + dx)[0], (prev_data[1] + dy)[0])
+            
 
-            self.point.set_data(self.x , self.y)
+
+            self.point.set_data([self.x] , [self.y])
+            # self.x  , self.y =self.x[0] , self.y[0]
             self.point.figure.canvas.draw()
+            
             # self.print_position((self.x , self.y))
             if self.conj != None:
                 self.conj.x, self.conj.y = self.x, -self.y
-                self.conj.point.set_data(self.conj.x, self.conj.y)
+                self.conj.point.set_data([self.conj.x], [self.conj.y])
                 self.conj.point.figure.canvas.draw()
+
         self.parent.response_plot()
+        # self.parent.response_plot_()
             # if self.orig != None:
             #     self.orig.x, self.orig.y = self.x, -self.y
             #     self.orig.point.set_data(self.orig.x, self.orig.y)
@@ -205,7 +213,7 @@ class DraggablePoint:
         print(f"New Position: x={position[0]}, y={position[1]}")
 
     def draw_point(self, x, y):
-        self.point.set_data(x, y)
+        self.point.set_data([x], [y])
         self.point.figure.canvas.draw()
 
     def delete_point(self):
@@ -249,14 +257,20 @@ class MyWindow(QMainWindow):
         self.zeros_conj = []
         self.poles_conj = []
 
-        # self.ui.checkBox.stateChanged.connect(lambda state: self.add_conj if state == 2 else self.remove_all_cong)
-        self.ui.checkBox.stateChanged.connect(self.handle_checkbox_change)
+        # self.ui.checkBox_conj.stateChanged.connect(lambda state: self.add_conj if state == 2 else self.remove_all_cong)
+        self.ui.checkBox_conj.stateChanged.connect(self.handle_checkbox_change)
 
 
-
+        QShortcut(QKeySequence("Ctrl+z"), self).activated.connect(lambda: self.combo_switch(0))
+        QShortcut(QKeySequence("Ctrl+p"), self).activated.connect(lambda: self.combo_switch(1))
+        
+        QShortcut(QKeySequence("Ctrl+c"), self).activated.connect(self.check_switch)
 
         # self.ui.grph_zero_plot.plot(x, y, pen='b')
         self.pls = self.c.axes.add_patch(plt.Circle((0, 0), 1, color='b', fill=False))
+        self.c.axes.axhline(0, color='black',linewidth=0.5)
+        self.c.axes.axvline(0, color='black',linewidth=0.5)
+
         self.ui.horizontalLayout_2.addWidget(self.c)
         self.c.axes.set_xlim(-1.5, 1.5)
         self.c.axes.set_ylim(-1.5, 1.5)
@@ -285,12 +299,30 @@ class MyWindow(QMainWindow):
         # self.c.mpl_connect('button_release_event', self.on_right_click)
         
     # def on_right_click(self , event):
+    def combo_switch(self , index):
+        self.ui.combx_zero_pole.setCurrentIndex(index)
+    
+    def check_switch(self ):
+        if self.ui.checkBox_conj.isChecked():
+            self.ui.checkBox_conj.setChecked(False)
+            self.remove_all_cong()
+        else:
+            self.ui.checkBox_conj.setChecked(True)
+            self.add_conj()
+            
+            # self.ui.checkBox_conj.setChecked(state)
+            # if state == True:
+            #     self.add_conj()
+            # else :
+            #     self.remove_all_cong()
+        
     def handle_checkbox_change(self, state):
         if state == 2:  # Checked
             self.add_conj()
         else:
             self.remove_all_cong()
     def add_conj(self ):
+        self.remove_all_cong()
         for zero in self.zeros :
             # if zero.conj == None:
                 zero.create_conjgate()
@@ -299,18 +331,33 @@ class MyWindow(QMainWindow):
             # if pole.conj == None:
                 pole.create_conjgate()
                 self.poles_conj.append(pole.conj)
-            
+        # self.response_plot()  
+        self.response_plot_()  
     def remove_all_cong(self):
         # pass
-        for zero in self.zeros_conj :
-            if zero != None:
-                zero.point.remove()
-        for pole in self.poles_conj:
-            if pole != None:
-                pole.point.remove()
+        for zero in self.zeros:
+            if zero.conj != None:
+                zero.conj.point.remove()
+                zero.conj = None
+        for pole in self.poles:
+            if pole.conj != None:
+                pole.conj.point.remove()
+                pole.conj = None
+            
+            
+        # for zero_conj in self.zeros_conj :
+        #     if zero_conj != None:
+        #         zero_conj.point.remove()
+        # for pole in self.poles_conj:
+        #     if pole != None:
+        #         pole.point.remove()
+                
+                
         self.zeros_conj.clear()
         self.poles_conj.clear()
         self.pls.figure.canvas.draw()
+        # self.response_plot()  
+        self.response_plot_()  
 
         # for zero , pole in zip(self.zeros , self.poles):
 
@@ -320,26 +367,49 @@ class MyWindow(QMainWindow):
         
     def on_right_click(self , point):
         point.point.remove()
-        if self.ui.checkBox.isChecked():
+        if point.conj != None:
             point.conj.point.remove()
+            if point.conj in self.zeros:
+                self.zeros.remove(point.conj) 
+            elif point.conj in self.poles:
+                self.poles.remove(point.conj) 
+            elif point.conj in self.zeros_conj:
+                self.zeros_conj.remove(point.conj) 
+            elif point.conj in self.poles_conj:
+                self.poles_conj.remove(point.conj) 
             
-        if point.marker == 'o':
-            if point in self.zeros:
-                self.zeros.remove(point)
-                self.zeros_conj.remove(point.conj)
-            elif point in self.zeros_conj:
-                self.zeros_conj.remove(point)
-                self.zeros.remove(point.conj)
-        else:
-            if point in self.poles:
-                self.poles.remove(point)
-                self.poles_conj.remove(point.conj)
-            elif point in self.poles_conj:
-                self.poles_conj.remove(point)
-                self.poles.remove(point.conj)
-            # point.point.remove()
+
+        # if self.ui.checkBox_conj.isChecked():
+
+        if point in self.zeros:
+            self.zeros.remove(point) 
+        elif point in self.poles:
+            self.poles.remove(point) 
+        elif point in self.zeros_conj:
+            self.zeros_conj.remove(point) 
+        elif point in self.poles_conj:
+            self.poles_conj.remove(point) 
+            
+            
+        # if point.marker == 'o':
+        #     if point in self.zeros:
+        #         self.zeros.remove(point)
+        #         self.zeros_conj.remove(point.conj)
+        #     elif point in self.zeros_conj:
+        #         self.zeros_conj.remove(point)
+        #         self.zeros.remove(point.conj)
+        # else:
+        #     if point in self.poles:
+        #         self.poles.remove(point)
+        #         self.poles_conj.remove(point.conj)
+        #     elif point in self.poles_conj:
+        #         self.poles_conj.remove(point)
+        #         self.poles.remove(point.conj)
+        #     # point.point.remove()
             
         self.pls.figure.canvas.draw()
+        
+        self.print()
         
         # for zero in self.zeros:
         #     zero.point.figure.canvas.draw()
@@ -348,43 +418,62 @@ class MyWindow(QMainWindow):
         x, y = event.xdata, event.ydata
       
         if event.inaxes == self.c.axes and event.button == Qt.LeftButton and event.dblclick:
-            if self.ui.comboBox.currentText() =="add zero":
+            if self.ui.combx_zero_pole.currentText() =="add zero":
                 marker = 'o'
                 self.zeros.append(DraggablePoint(self.c.axes,self ,  x, y ,marker ))
                     # self.zeros[-1].create_conjgate()
             else:
                 marker = "x"
                 self.poles.append(DraggablePoint(self.c.axes,self ,  x, y ,marker ))
-            print("zeros")
-            for zero in self.zeros:
-                
-                print(zero.x , zero.y)
-            print("________")
-
-            print("poles")
-            for pole in self.poles:
-                
-                print(pole.x , pole.y)
-            print("________")
-            if self.ui.checkBox.isChecked():
+            
+            if self.ui.checkBox_conj.isChecked():
                 self.add_conj()
             # self.points.append((x , y))
             # print(self.points)
             self.response_plot()
-    
+            # self.response_plot_()
+            self.print()
+
+    def print(self):
+        print("zeros")
+        for zero in self.zeros:
+            
+            print(zero.x , zero.y)
+        print("________")
+
+        print("poles")
+        for pole in self.poles:
+            
+            print(pole.x , pole.y)
+        print("________")
+        
+        print("poles_conj")
+        for pole_conj in self.poles_conj:
+            
+            print(pole_conj.x , pole_conj.y)
+        print("________")
+        
+        print("zeros_conj")
+        for zero_conj in self.zeros_conj:
+            
+            print(zero_conj.x , zero_conj.y)
+        print("________")
+        
+
     def clear_all_zeros(self):
         for zero in self.zeros:
             zero.point.remove()
             # self.zeros.remove(zero)
             
-        if self.ui.checkBox.isChecked():
+        if self.ui.checkBox_conj.isChecked():
             for zero_conj in self.zeros_conj:
                 zero_conj.point.remove()
                 # self.zeros_conj.remove(zero_conj)
         self.zeros.clear()
         self.zeros_conj.clear()
         self.pls.figure.canvas.draw()
-        self.clear_mag_phase_grph()
+        self.response_plot_()
+        # self.clear_mag_phase_grph()
         
         
         
@@ -392,31 +481,45 @@ class MyWindow(QMainWindow):
         for pole in self.poles:
             pole.point.remove()
             
-        if self.ui.checkBox.isChecked():
+        if self.ui.checkBox_conj.isChecked():
             for pole_conj in self.poles_conj:
                 pole_conj.point.remove()
         self.poles.clear()
         self.poles_conj.clear()
         self.pls.figure.canvas.draw()
-        self.clear_mag_phase_grph()
+        # self.clear_mag_phase_grph()
+        self.response_plot_()
         
         
     def clear_all(self):
         self.clear_all_poles()
         self.clear_all_zeros()
         
-    def convert_to_complex(self , points):
-        numbers = [(point.x , point.y ) for point in points]
+    def convert_to_complex(self , points , conjgate):
+        
+        points_c = points + conjgate
+        numbers = [(point.x , point.y ) for point in points_c]
+        print(numbers)
         return [complex(real, imag) for (real, imag) in numbers ]
 
     def clear_mag_phase_grph(self):
         self.ui.grph_mag_response.clear()
         self.ui.grph_phase_response.clear()
 
+    
+    def get_zeros_poles(self):
+        zeros = self.convert_to_complex(self.zeros , self.zeros_conj)
+        poles = self.convert_to_complex(self.poles , self.poles_conj)
+        return zeros , poles
+    
     def response_plot(self):
         self.clear_mag_phase_grph()
-        zeros = self.convert_to_complex(self.zeros)
-        poles = self.convert_to_complex(self.poles)
+        # zeros = self.convert_to_complex(self.zeros)
+        # poles = self.convert_to_complex(self.poles)
+        zeros , poles = self.get_zeros_poles()
+        print("here")
+        print(zeros)
+        print("here")
         system = signal.TransferFunction(np.poly(zeros), np.poly(poles))
         frequencies, response = signal.freqz(system.num, system.den)
 
@@ -429,7 +532,22 @@ class MyWindow(QMainWindow):
         phase_plot.setPen('r')
         
         # self.ui.grph_mag_response.plot()
+# 
+    def response_plot_(self):
+        self.clear_mag_phase_grph()
 
+        zeros , poles = self.get_zeros_poles() 
+        freq = np.logspace(-1, 2, 1000)
+        num = np.poly(zeros)
+        den = np.poly(poles)
+        system = (num, den)
+        _, response = signal.freqresp(system, freq)
+        self.ui.grph_mag_response.plot(freq, 20 * np.log10(np.abs(response)))
+        self.ui.grph_phase_response.plot(freq, np.angle(response, deg=True), pen='r')
+
+
+        
+        
         
         
     
