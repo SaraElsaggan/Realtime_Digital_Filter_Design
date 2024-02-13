@@ -1,3 +1,5 @@
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QTableWidget, QTableWidgetItem, QMessageBox, QFileDialog, QShortcut
+from scipy import signal
 from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene
 
 import pandas as pd
@@ -122,7 +124,7 @@ class MyWindow(QMainWindow):
         super(MyWindow , self).__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)  
-        self.padding_area = CustomGraphicsView()
+        # self.padding_area = CustomGraphicsView()
         # self.ui.verticalLayout_3.addWidget(self.padding_area)
         
         self.c = MplCanvas(self)
@@ -132,7 +134,7 @@ class MyWindow(QMainWindow):
         self.zeros_conj = []
         self.poles_conj = []
 
-        self.ui.checkBox_conj.stateChanged.connect(self.handle_checkbox_change)
+        # self.ui.checkBox_conj.stateChanged.connect(self.handle_checkbox_change)
         self.current_index = 0
 
         QShortcut(QKeySequence("Ctrl+z"), self).activated.connect(lambda: self.combo_switch(0))
@@ -151,10 +153,8 @@ class MyWindow(QMainWindow):
         self.ui.btn_clr_pole.clicked.connect(self.clear_all_poles)
         self.ui.btn_clr_all.clicked.connect(self.clear_all)
         QShortcut(QKeySequence("Ctrl+o"), self).activated.connect(self.open_file)
-        # self.ui.grph_3.
-        # self.padding_area.mouseMoveEvent()
-        self.ui.grph_3.scene().sigMouseMoved.connect(self.fun)
-
+        self.ui.grph_3.scene().sigMouseMoved.connect(self.genrate_signal_with_mouse)
+        self.ui.checkBox.stateChanged.connect(self.handle_gen_checkbox)
 
         # self.
 
@@ -163,24 +163,45 @@ class MyWindow(QMainWindow):
         
         self.c.mpl_connect('button_press_event', self.on_double_click)
 
+        # coeff_item = QTableWidgetItem("x1")
+        # coeff_item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
+        # coeff_item.setCheckState(Qt.CheckState.Checked)
+        # # Insert the item into the table widget
+        # self.ui.tableWidget.insertRow(self.ui.tableWidget.rowCount())
+        # self.ui.tableWidget.setItem(self.ui.tableWidget.rowCount()-1, 0, coeff_item)
+
+        # self.ui.tableWidget.add
+        self.ui.tableWidget.setColumnCount(1)  # Set column count to 1 for a single column
+        self.ui.tableWidget.setRowCount(1) 
+        item =  QTableWidgetItem('Item')
+        item.setFlags(item.flags() | 2)  # Enable ItemIsUserCheckable
+        item.setCheckState(1)  # Set default state to unchecked
+        self.ui.tableWidget.setItem(0, 0, item)
+        # self.ui.tableWidget.setItem(2, 0, item)
+        # self.ui.tableWidget.setItem(3, 0, item)
+
+        self.animation_speed = 1
+
         self.x_positions = []
         self.y_positions = []
         self.counter = 1
         self.gen_data = []
-    def fun(self , event):
-        # Get the mouse position
-        # pos = event[0]  # event is a tuple containing the event information
-        # if self.grph_3.sceneBoundingRect().contains(pos):
-        #     mouse_point = self.grph_3.plotItem.vb.mapSceneToView(pos)
-        #     x = mouse_point.x()
-        #     y = mouse_point.y()
-
-        #     # Append the positions to the lists
-        #     self.x_positions.append(x)
-        #     self.y_positions.append(y)
-
-        #     # Print the positions (you can remove this line if you don't need it)
-        #     print(f"Mouse moved to: x={x}, y={y}")
+        self.data_y = None
+        self.data_x = None
+        
+        self.ui.slider_process_speed.valueChanged.connect(self.handle_slider_speed)
+        
+    def handle_slider_speed(self):
+          self.animation_speed = int(self.ui.slider_process_speed.value())
+          
+    def handle_gen_checkbox(self):
+        if  self.ui.checkBox.isChecked():
+            self.animation_timer.stop()
+            self.data_x = 0
+            self.data_y = []
+            self.ui.grph_1.clear()     
+            
+    def genrate_signal_with_mouse(self , event):
         if self.ui.checkBox.isChecked():
             x = event.x()
             y = event.y()
@@ -189,51 +210,22 @@ class MyWindow(QMainWindow):
             self.ui.grph_1.clear()
             self.counter += 1
             self.gen_data.append(self.counter)
+            self.data_y = self.x_positions
             self.ui.grph_1.plot(self.gen_data , self.x_positions)
+            self.ui.grph_1.autoRange()
             print(self.x_positions)
+            self.create_filter_from_z_p()
+            self.ui.grph_2.plot(self.gen_data , self.filtered_signal)
+            self.ui.grph_2.autoRange()
 
         print("_____")
-    def plot_signal(self  , data) :
-        # p = 0
-        # for signal in self.signals_1:
-        data_line = self.ui.grph_1.plotItem.plot()
-        # signal["data_lines"].append(data_line)
-        # signal["data_indices"].append(0)
-            # p += 20                 
-        # legend_1 = pg.LegendItem((10, 10), offset=(40 ,  p ))
-        # legend_1.setParentItem(self.ui.graphicsView.getPlotItem())
-        # legend_1.addItem(data_line, signal["name"])
-        # self.legend_1.append(legend_1)
-        
-        
-        # self.fun()
-        
-        self.ui.grph_1.plotItem.getViewBox().setAutoPan(x=True,y=True)
-        self.timer_1.timeout.connect(lambda:self.update_plot_data_grph_1(self.signals_1))
-        self.timer_1.start()
-        # max_y , min_y = self.find_max_min_y_grph_1()
-        # self.ui.grph_1.plotItem.vb.setLimits(xMin=0, xMax=max(signal["x"]), yMin=min_y-.5, yMax=max_y+.5)
-        # self.ui.grph_1.setXRange(0 , 0.002*len(signal["data"]))
-        # self.ui.grph_1.addLegend(offset=(50, 30))
-        
-        # self.update_legends_1()
-        # legends = self.ui.grph_1.plotItem.legend.items
-        # print(legends)
-        
-        # icon = QtGui.QPixmap("pause.png")
-        # self.ui.btn_play_pasuse_viewer_1.setIcon(QtGui.QIcon(icon))
-        # self.ui.grph_1.plotItem.addLegend()
-        
-        self.ui.grph_1.show()
-        
-    def update_plot_data_grph_1(self,signals):
-        for signal in signals:
-            for i in range(len(signal["data_lines"])):
-                x = signal["x"][:signal["data_indices"][i]]
-                y = signal["y"][:signal["data_indices"][i]]
-                signal["data_indices"][i] += 5 
-                signal["data_lines"][i].setData(x, y)
-                
+    
+    def create_filter_from_z_p(self):
+        zeros , poles = self.get_zeros_poles()
+        a, b = signal.zpk2tf(zeros, poles, 1)
+        self.filtered_signal = np.real(signal.lfilter(b, a, self.data_y))
+        # pass
+
     def combo_switch(self , index):
         self.ui.combx_zero_pole.setCurrentIndex(index)
     
@@ -243,23 +235,6 @@ class MyWindow(QMainWindow):
         else:
             self.ui.checkBox_conj.setChecked(True)
         
-    def handle_checkbox_change(self, state):
-        pass
-        # if state == 2:  # Checked
-        #     self.add_conj()
-        # else:
-        #     self.remove_all_cong()
-
-    # def add_conj(self ):
-    #     self.remove_all_cong()
-    #     for zero in self.zeros :
-    #             zero.create_conjgate()
-    #             self.zeros_conj.append(zero.conj)
-    #     for pole in self.poles:
-    #             pole.create_conjgate()
-    #             self.poles_conj.append(pole.conj)
-    #     self.response_plot()  
-
     def remove_all_cong(self):
         # pass
         for zero in self.zeros:
@@ -386,6 +361,8 @@ class MyWindow(QMainWindow):
         self.ui.grph_phase_response.clear()
     
     def get_zeros_poles(self):
+        print("zeros")
+        print(self.zeros)
         zeros = self.convert_to_complex(self.zeros , self.zeros_conj)
         poles = self.convert_to_complex(self.poles , self.poles_conj)
         return zeros , poles
@@ -395,6 +372,7 @@ class MyWindow(QMainWindow):
         zeros , poles = self.get_zeros_poles()
         print("here")
         print(zeros)
+        print(poles)
         print("here")
         system = signal.TransferFunction(np.poly(zeros), np.poly(poles))
         frequencies, response = signal.freqz(system.num, system.den)
@@ -413,20 +391,28 @@ class MyWindow(QMainWindow):
             self.poles.append(DraggablePoint(self.c.axes,self ,  pole.x, pole.y ,'x' ))
 
     def play_animation(self):
-       
+        self.ui.grph_2.clear()
+        self.ui.grph_1.clear()
         print("animation playing")
         self.animation_timer.timeout.connect(lambda:self.update_plot_with_time(self.data_y))
         self.data_line = self.ui.grph_1.plotItem.plot( pen="r")
+        self.data_line_filter = self.ui.grph_2.plotItem.plot(pen = 'r')
         self.animation_timer.start(30)
-        self.is_animation_running = True
+        # self.is_animation_running = True
+        self.current_index = 0
+        self.create_filter_from_z_p()
         
     def update_plot_with_time(self , data):
-        self.animation_speed = 1
+        # self.animation_speed = 1
+        
         self.data_line.setData(self.data_x[0:self.current_index] , self.data_y[0:self.current_index])
+        self.data_line_filter.setData(self.data_x[0:self.current_index] , self.filtered_signal[0:self.current_index])
+        self.ui.grph_1.autoRange()
         self.ui.grph_1.autoRange()
        
         if self.current_index >= len(data)-1:
             self.is_signal_ended = True
+            
         
         self.current_index += self.animation_speed # Convert the speed value to integer
         # QApplication.processEvents()
@@ -437,11 +423,14 @@ class MyWindow(QMainWindow):
         df = np.genfromtxt(file_path, delimiter = ',')
         self.data_x = df[:, 0].tolist()
         self.data_y = df[:, 1].tolist()
+        self.ui.grph_1.clear()
+        self.ui.grph_2.clear()
         self.ui.grph_1.plot(self.data_x[0:self.current_index],  self.data_y[0:self.current_index])
+
         self.play_animation()
     
-    def signal_gen_via_mouse(self):
-        self.signal_gen = self.ui.padding_area.mouseMoveEvent()
+    # def signal_gen_via_mouse(self):
+    #     self.signal_gen = self.ui.padding_area.mouseMoveEvent()
         
 def main():
     app = QApplication(sys.argv)
