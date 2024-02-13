@@ -1,3 +1,8 @@
+import pandas as pd
+from PyQt5.QtWidgets import QInputDialog  ,  QApplication, QMainWindow, QShortcut, QFileDialog
+from PyQt5.QtCore import Qt, QTimer
+from PyQt5 import QtCore, QtGui
+import pyqtgraph as pg
 from scipy import signal
 
 from PyQt5.QtCore import Qt
@@ -104,7 +109,7 @@ class MyWindow(QMainWindow):
         self.poles_conj = []
 
         self.ui.checkBox_conj.stateChanged.connect(self.handle_checkbox_change)
-
+        self.current_index = 0
 
         QShortcut(QKeySequence("Ctrl+z"), self).activated.connect(lambda: self.combo_switch(0))
         QShortcut(QKeySequence("Ctrl+p"), self).activated.connect(lambda: self.combo_switch(1))
@@ -121,36 +126,81 @@ class MyWindow(QMainWindow):
         self.ui.btn_clr_zero.clicked.connect(self.clear_all_zeros)
         self.ui.btn_clr_pole.clicked.connect(self.clear_all_poles)
         self.ui.btn_clr_all.clicked.connect(self.clear_all)
+        QShortcut(QKeySequence("Ctrl+o"), self).activated.connect(self.open_file)
 
+        # self.
+
+        self.animation_timer = QTimer()
+        # self.animation_timer.timeout.connect(self.update_plot_with_time)
         
         self.c.mpl_connect('button_press_event', self.on_double_click)
-
+        
+    def plot_signal(self  , data) :
+        # p = 0
+        # for signal in self.signals_1:
+        data_line = self.ui.grph_1.plotItem.plot()
+        # signal["data_lines"].append(data_line)
+        # signal["data_indices"].append(0)
+            # p += 20                 
+        # legend_1 = pg.LegendItem((10, 10), offset=(40 ,  p ))
+        # legend_1.setParentItem(self.ui.graphicsView.getPlotItem())
+        # legend_1.addItem(data_line, signal["name"])
+        # self.legend_1.append(legend_1)
+        
+        
+        # self.fun()
+        
+        self.ui.grph_1.plotItem.getViewBox().setAutoPan(x=True,y=True)
+        self.timer_1.timeout.connect(lambda:self.update_plot_data_grph_1(self.signals_1))
+        self.timer_1.start()
+        # max_y , min_y = self.find_max_min_y_grph_1()
+        # self.ui.grph_1.plotItem.vb.setLimits(xMin=0, xMax=max(signal["x"]), yMin=min_y-.5, yMax=max_y+.5)
+        # self.ui.grph_1.setXRange(0 , 0.002*len(signal["data"]))
+        # self.ui.grph_1.addLegend(offset=(50, 30))
+        
+        # self.update_legends_1()
+        # legends = self.ui.grph_1.plotItem.legend.items
+        # print(legends)
+        
+        # icon = QtGui.QPixmap("pause.png")
+        # self.ui.btn_play_pasuse_viewer_1.setIcon(QtGui.QIcon(icon))
+        # self.ui.grph_1.plotItem.addLegend()
+        
+        self.ui.grph_1.show()
+        
+    def update_plot_data_grph_1(self,signals):
+        for signal in signals:
+            for i in range(len(signal["data_lines"])):
+                x = signal["x"][:signal["data_indices"][i]]
+                y = signal["y"][:signal["data_indices"][i]]
+                signal["data_indices"][i] += 5 
+                signal["data_lines"][i].setData(x, y)
+                
     def combo_switch(self , index):
         self.ui.combx_zero_pole.setCurrentIndex(index)
     
     def check_switch(self ):
         if self.ui.checkBox_conj.isChecked():
             self.ui.checkBox_conj.setChecked(False)
-            self.remove_all_cong()
         else:
             self.ui.checkBox_conj.setChecked(True)
-            self.add_conj()
         
     def handle_checkbox_change(self, state):
-        if state == 2:  # Checked
-            self.add_conj()
-        else:
-            self.remove_all_cong()
+        pass
+        # if state == 2:  # Checked
+        #     self.add_conj()
+        # else:
+        #     self.remove_all_cong()
 
-    def add_conj(self ):
-        self.remove_all_cong()
-        for zero in self.zeros :
-                zero.create_conjgate()
-                self.zeros_conj.append(zero.conj)
-        for pole in self.poles:
-                pole.create_conjgate()
-                self.poles_conj.append(pole.conj)
-        self.response_plot()  
+    # def add_conj(self ):
+    #     self.remove_all_cong()
+    #     for zero in self.zeros :
+    #             zero.create_conjgate()
+    #             self.zeros_conj.append(zero.conj)
+    #     for pole in self.poles:
+    #             pole.create_conjgate()
+    #             self.poles_conj.append(pole.conj)
+    #     self.response_plot()  
 
     def remove_all_cong(self):
         # pass
@@ -200,13 +250,21 @@ class MyWindow(QMainWindow):
             if self.ui.combx_zero_pole.currentText() =="add zero":
                 marker = 'o'
                 self.zeros.append(DraggablePoint(self.c.axes,self ,  x, y ,marker ))
+                if self.ui.checkBox_conj.isChecked():
+                    self.zeros[-1].create_conjgate()
+                    self.zeros_conj.append(self.zeros[-1].conj)
+
             else:
                 marker = "x"
                 self.poles.append(DraggablePoint(self.c.axes,self ,  x, y ,marker ))
-            
-            if self.ui.checkBox_conj.isChecked():
-                self.add_conj()
+                if self.ui.checkBox_conj.isChecked():
+                    self.poles[-1].create_conjgate()
+                    self.poles_conj.append(self.poles[-1].conj)
             self.response_plot()
+
+            
+            # if self.ui.checkBox_conj.isChecked():
+            #     self.add_conj()
 
     def print(self):
         print("zeros")
@@ -236,9 +294,9 @@ class MyWindow(QMainWindow):
     def clear_all_zeros(self):
         for zero in self.zeros:
             zero.point.remove()
-        if self.ui.checkBox_conj.isChecked():
-            for zero_conj in self.zeros_conj:
-                zero_conj.point.remove()
+            if zero.conj != None:
+                zero.conj.point.remove()
+                self.zeros_conj.remove(zero.conj)
         self.zeros.clear()
         self.zeros_conj.clear()
         self.circle.figure.canvas.draw()
@@ -247,10 +305,9 @@ class MyWindow(QMainWindow):
     def clear_all_poles(self):
         for pole in self.poles:
             pole.point.remove()
-            
-        if self.ui.checkBox_conj.isChecked():
-            for pole_conj in self.poles_conj:
-                pole_conj.point.remove()
+            if pole.conj != None:
+                pole.conj.point.remove()
+                self.poles_conj.remove(pole.conj)
         self.poles.clear()
         self.poles_conj.clear()
         self.circle.figure.canvas.draw()
@@ -290,8 +347,58 @@ class MyWindow(QMainWindow):
         phase_plot = self.ui.grph_phase_response.plot(frequencies, np.angle(response, deg=True))
         phase_plot.setPen('r')
         
-    
+    def all_pass_zero_poles_plot(self , zeros , poles):
+        self.clear_all()
+        for zero in zeros:
+            self.zeros.append(DraggablePoint(self.c.axes,self ,  zero.x, zero.y ,'o' ))
+        for pole in poles:
+            self.poles.append(DraggablePoint(self.c.axes,self ,  pole.x, pole.y ,'x' ))
 
+    def play_animation(self):
+        # self.orignal_data  = np.linspace(0 , 1000 , 1)
+        # if self.is_signal_ended:
+        #     print("Signal Ended")
+        #     self.current_index = 0
+        #     self.reset_viewport_range()
+        #     self.is_signal_ended = False
+        print("animation playing")
+        self.animation_timer.timeout.connect(lambda:self.update_plot_with_time(self.data_y))
+        # self.animation_timer.timeout.connect(lambda:self.update_plot_with_time(self.orignal_data))
+        self.data_line = self.ui.grph_1.plotItem.plot( pen="r")
+        self.animation_timer.start(30)
+        self.is_animation_running = True
+        # self.set_play_button_state()
+        
+    def update_plot_with_time(self , data):
+        self.animation_speed = 1
+        # x_min , x_max = self.ui.grph_1.viewRange()[0]
+        # self.ui.grph_1.plot(self.data_x[0:self.current_index] , self.data_y[0:self.current_index] , pen = 'r')
+        self.data_line.setData(self.data_x[0:self.current_index] , self.data_y[0:self.current_index])
+        self.ui.grph_1.autoRange()
+        # self.ui.grph_2.setData(self.data_modified[0:self.current_index])
+
+        # if self.current_index > x_max:   
+        #     for viewport in [self.ui.grph_1, self.ui.grph_2]:
+        #         viewport.setLimits(xMax = self.current_index)
+        #         viewport.getViewBox().translateBy(x = self.animation_speed)
+       
+        if self.current_index >= len(data)-1:
+            # self.stop_animation()
+            self.is_signal_ended = True
+        
+        self.current_index += self.animation_speed # Convert the speed value to integer
+        # QApplication.processEvents()
+            
+    def open_file(self):
+        file_path  , _ = QFileDialog.getOpenFileName( self , "open file", "" ,"(*.csv) ")
+        # df = pd.read_csv(file_path)
+        df = np.genfromtxt(file_path, delimiter = ',')
+        self.data_x = df[:, 0].tolist()
+        self.data_y = df[:, 1].tolist()
+        self.ui.grph_1.plot(self.data_x[0:self.current_index],  self.data_y[0:self.current_index])
+        self.play_animation()
+        
+        
 def main():
     app = QApplication(sys.argv)
     window = MyWindow() 
