@@ -1,3 +1,5 @@
+from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene
+
 import pandas as pd
 from PyQt5.QtWidgets import QInputDialog  ,  QApplication, QMainWindow, QShortcut, QFileDialog
 from PyQt5.QtCore import Qt, QTimer
@@ -92,14 +94,36 @@ class MplCanvas(FigureCanvasQTAgg):
         fig = Figure(figsize=(width, height), dpi=dpi)
         self.axes = fig.add_subplot(111)
         super(MplCanvas, self).__init__(fig)
- 
+
+class CustomGraphicsView(QGraphicsView):
+    def __init__(self):
+        super().__init__()
+        self.scene = QGraphicsScene()
+        self.setScene(self.scene)
+        self.points_x = []
+        self.points_y = []
+        
+    def mouseDoubleClickEvent(self, event):
+        # Call your function here
+        print("Double click event occurred")
+        
+    def mouseMoveEvent(self, event):
+        if event.buttons() == Qt.LeftButton:
+            pos = event.pos()
+            scene_pos = self.mapToScene(pos)
+            self.points_x.append(scene_pos.x())
+            self.points_y.append(scene_pos.y())
+            print(f"X: {scene_pos.x()}, Y: {scene_pos.y()}")
+        super().mouseMoveEvent(event)
+
 class MyWindow(QMainWindow):   
     
     def __init__(self ):
         super(MyWindow , self).__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)  
-        
+        self.padding_area = CustomGraphicsView()
+        # self.ui.verticalLayout_3.addWidget(self.padding_area)
         
         self.c = MplCanvas(self)
         
@@ -127,6 +151,10 @@ class MyWindow(QMainWindow):
         self.ui.btn_clr_pole.clicked.connect(self.clear_all_poles)
         self.ui.btn_clr_all.clicked.connect(self.clear_all)
         QShortcut(QKeySequence("Ctrl+o"), self).activated.connect(self.open_file)
+        # self.ui.grph_3.
+        # self.padding_area.mouseMoveEvent()
+        self.ui.grph_3.scene().sigMouseMoved.connect(self.fun)
+
 
         # self.
 
@@ -134,7 +162,37 @@ class MyWindow(QMainWindow):
         # self.animation_timer.timeout.connect(self.update_plot_with_time)
         
         self.c.mpl_connect('button_press_event', self.on_double_click)
-        
+
+        self.x_positions = []
+        self.y_positions = []
+        self.counter = 1
+        self.gen_data = []
+    def fun(self , event):
+        # Get the mouse position
+        # pos = event[0]  # event is a tuple containing the event information
+        # if self.grph_3.sceneBoundingRect().contains(pos):
+        #     mouse_point = self.grph_3.plotItem.vb.mapSceneToView(pos)
+        #     x = mouse_point.x()
+        #     y = mouse_point.y()
+
+        #     # Append the positions to the lists
+        #     self.x_positions.append(x)
+        #     self.y_positions.append(y)
+
+        #     # Print the positions (you can remove this line if you don't need it)
+        #     print(f"Mouse moved to: x={x}, y={y}")
+        if self.ui.checkBox.isChecked():
+            x = event.x()
+            y = event.y()
+            self.x_positions.append(x)
+            self.y_positions.append(y)
+            self.ui.grph_1.clear()
+            self.counter += 1
+            self.gen_data.append(self.counter)
+            self.ui.grph_1.plot(self.gen_data , self.x_positions)
+            print(self.x_positions)
+
+        print("_____")
     def plot_signal(self  , data) :
         # p = 0
         # for signal in self.signals_1:
@@ -355,35 +413,19 @@ class MyWindow(QMainWindow):
             self.poles.append(DraggablePoint(self.c.axes,self ,  pole.x, pole.y ,'x' ))
 
     def play_animation(self):
-        # self.orignal_data  = np.linspace(0 , 1000 , 1)
-        # if self.is_signal_ended:
-        #     print("Signal Ended")
-        #     self.current_index = 0
-        #     self.reset_viewport_range()
-        #     self.is_signal_ended = False
+       
         print("animation playing")
         self.animation_timer.timeout.connect(lambda:self.update_plot_with_time(self.data_y))
-        # self.animation_timer.timeout.connect(lambda:self.update_plot_with_time(self.orignal_data))
         self.data_line = self.ui.grph_1.plotItem.plot( pen="r")
         self.animation_timer.start(30)
         self.is_animation_running = True
-        # self.set_play_button_state()
         
     def update_plot_with_time(self , data):
         self.animation_speed = 1
-        # x_min , x_max = self.ui.grph_1.viewRange()[0]
-        # self.ui.grph_1.plot(self.data_x[0:self.current_index] , self.data_y[0:self.current_index] , pen = 'r')
         self.data_line.setData(self.data_x[0:self.current_index] , self.data_y[0:self.current_index])
         self.ui.grph_1.autoRange()
-        # self.ui.grph_2.setData(self.data_modified[0:self.current_index])
-
-        # if self.current_index > x_max:   
-        #     for viewport in [self.ui.grph_1, self.ui.grph_2]:
-        #         viewport.setLimits(xMax = self.current_index)
-        #         viewport.getViewBox().translateBy(x = self.animation_speed)
        
         if self.current_index >= len(data)-1:
-            # self.stop_animation()
             self.is_signal_ended = True
         
         self.current_index += self.animation_speed # Convert the speed value to integer
@@ -397,7 +439,9 @@ class MyWindow(QMainWindow):
         self.data_y = df[:, 1].tolist()
         self.ui.grph_1.plot(self.data_x[0:self.current_index],  self.data_y[0:self.current_index])
         self.play_animation()
-        
+    
+    def signal_gen_via_mouse(self):
+        self.signal_gen = self.ui.padding_area.mouseMoveEvent()
         
 def main():
     app = QApplication(sys.argv)
