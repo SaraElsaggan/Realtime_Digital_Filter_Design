@@ -131,6 +131,8 @@ class MyWindow(QMainWindow):
         
         self.zeros = []
         self.poles = []
+        self.zeros_allpass = []
+        self.poles_allpass = []
         self.zeros_conj = []
         self.poles_conj = []
 
@@ -156,29 +158,47 @@ class MyWindow(QMainWindow):
         self.ui.grph_3.scene().sigMouseMoved.connect(self.genrate_signal_with_mouse)
         self.ui.checkBox.stateChanged.connect(self.handle_gen_checkbox)
 
-        # self.
-
         self.animation_timer = QTimer()
-        # self.animation_timer.timeout.connect(self.update_plot_with_time)
         
         self.c.mpl_connect('button_press_event', self.on_double_click)
 
-        # coeff_item = QTableWidgetItem("x1")
-        # coeff_item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
-        # coeff_item.setCheckState(Qt.CheckState.Checked)
-        # # Insert the item into the table widget
-        # self.ui.tableWidget.insertRow(self.ui.tableWidget.rowCount())
-        # self.ui.tableWidget.setItem(self.ui.tableWidget.rowCount()-1, 0, coeff_item)
+        self.all_pass_coff = ['1' , '-1' , '.45' , '.345' , '-.9' , '0']
+        self.checked_coeff = []
+        self.ui.tbl_allpass_list.setColumnCount(1)  # Set column count to 1 for a single column
+        # self.ui.tbl_allpass_list.setRowCount(7) 
+        self.ui.tbl_allpass_list.verticalHeader().setVisible(False)
 
-        # self.ui.tableWidget.add
-        self.ui.tableWidget.setColumnCount(1)  # Set column count to 1 for a single column
-        self.ui.tableWidget.setRowCount(1) 
-        item =  QTableWidgetItem('Item')
-        item.setFlags(item.flags() | 2)  # Enable ItemIsUserCheckable
-        item.setCheckState(1)  # Set default state to unchecked
-        self.ui.tableWidget.setItem(0, 0, item)
-        # self.ui.tableWidget.setItem(2, 0, item)
-        # self.ui.tableWidget.setItem(3, 0, item)
+        # Hide column headers
+        self.ui.tbl_allpass_list.horizontalHeader().setVisible(False)
+        self.ui.tbl_allpass_list.setShowGrid(False)
+
+
+        for coff in self.all_pass_coff:
+            row_position = self.ui.tbl_allpass_list.rowCount()
+            self.ui.tbl_allpass_list.insertRow(row_position)
+            item = QTableWidgetItem(coff)
+            item.setFlags(item.flags() | 2)  # Enable ItemIsUserCheckable
+            item.setCheckState(0)  # Set default state to unchecked
+            self.ui.tbl_allpass_list.setItem(row_position, 0, item)
+
+
+        self.ui.tbl_allpass_list.setColumnWidth(0, 50000)
+
+        last_row_index = self.ui.tbl_allpass_list.rowCount() - 1
+
+        # Set the text in the last cell of the last row
+        self.ui.tbl_allpass_list.setItem(last_row_index, self.ui.tbl_allpass_list.columnCount() - 1, QTableWidgetItem("-------------------------------------Your custom_built all pass-------------------------------------"))
+        self.ui.tbl_allpass_list.itemChanged.connect(self.allpass_response)
+
+        
+            
+            
+        # self.ui.tbl_allpass_list.setColumnCount(1)  # Set column count to 1 for a single column
+        # self.ui.tbl_allpass_list.setRowCount(1) 
+        # item =  QTableWidgetItem('Item')
+        # item.setFlags(item.flags() | 2)  # Enable ItemIsUserCheckable
+        # item.setCheckState(1)  # Set default state to unchecked
+        # self.ui.tbl_allpass_list.setItem(0, 0, item)
 
         self.animation_speed = 1
 
@@ -190,6 +210,26 @@ class MyWindow(QMainWindow):
         self.data_x = None
         
         self.ui.slider_process_speed.valueChanged.connect(self.handle_slider_speed)
+
+        self.ui.btn_add_coeff.clicked.connect(self.add_coustom_coff)
+        # self.ui.tbl_allpass_list.it
+
+    # def calc_allpass_zeros_poles(self):
+    #     coffs = [] /
+    #     for 
+    def add_coustom_coff(self):
+        real = self.ui.input_real.value()
+        img = self.ui.input_imag.value()
+        coff = f"{real}+{img}j"
+        row_position = self.ui.tbl_allpass_list.rowCount()
+        self.ui.tbl_allpass_list.insertRow(row_position)
+        item = QTableWidgetItem(coff)
+        item.setFlags(item.flags() | 2)  # Enable ItemIsUserCheckable
+        item.setCheckState(0)  # Set default state to unchecked
+        self.ui.tbl_allpass_list.setItem(row_position, 0, item)
+        # coff = complex(coff)
+        
+        
         
     def handle_slider_speed(self):
           self.animation_speed = int(self.ui.slider_process_speed.value())
@@ -199,7 +239,8 @@ class MyWindow(QMainWindow):
             self.animation_timer.stop()
             self.data_x = 0
             self.data_y = []
-            self.ui.grph_1.clear()     
+            self.ui.grph_input_sig.clear()     
+            self.ui.grph_output_sig.clear()     
             
     def genrate_signal_with_mouse(self , event):
         if self.ui.checkBox.isChecked():
@@ -207,23 +248,28 @@ class MyWindow(QMainWindow):
             y = event.y()
             self.x_positions.append(x)
             self.y_positions.append(y)
-            self.ui.grph_1.clear()
+            self.ui.grph_input_sig.clear()
             self.counter += 1
             self.gen_data.append(self.counter)
             self.data_y = self.x_positions
-            self.ui.grph_1.plot(self.gen_data , self.x_positions)
-            self.ui.grph_1.autoRange()
+            self.ui.grph_input_sig.plot( self.x_positions)
+            self.ui.grph_input_sig.autoRange()
             print(self.x_positions)
+            # self.
             self.create_filter_from_z_p()
-            self.ui.grph_2.plot(self.gen_data , self.filtered_signal)
-            self.ui.grph_2.autoRange()
+            self.ui.grph_output_sig.clear()
+
+            self.ui.grph_output_sig.plot(self.gen_data , self.filtered_signal)
+            self.ui.grph_output_sig.autoRange()
 
         print("_____")
     
-    def create_filter_from_z_p(self):
+    def create_filter_from_z_p(self ):
+        # self.ui.grph_output_sig.clear()
         zeros , poles = self.get_zeros_poles()
-        a, b = signal.zpk2tf(zeros, poles, 1)
-        self.filtered_signal = np.real(signal.lfilter(b, a, self.data_y))
+        allpass_zeros , allpass_poles = self.allpass_z_p()
+        a, b = signal.zpk2tf(zeros+allpass_zeros, poles+allpass_poles, 1)
+        self.filtered_signal = np.real(signal.lfilter(a, b, self.data_y))
         # pass
 
     def combo_switch(self , index):
@@ -365,6 +411,7 @@ class MyWindow(QMainWindow):
         print(self.zeros)
         zeros = self.convert_to_complex(self.zeros , self.zeros_conj)
         poles = self.convert_to_complex(self.poles , self.poles_conj)
+        
         return zeros , poles
     
     def response_plot(self):
@@ -383,38 +430,55 @@ class MyWindow(QMainWindow):
         phase_plot = self.ui.grph_phase_response.plot(frequencies, np.angle(response, deg=True))
         phase_plot.setPen('r')
         
-    def all_pass_zero_poles_plot(self , zeros , poles):
-        self.clear_all()
-        for zero in zeros:
-            self.zeros.append(DraggablePoint(self.c.axes,self ,  zero.x, zero.y ,'o' ))
-        for pole in poles:
-            self.poles.append(DraggablePoint(self.c.axes,self ,  pole.x, pole.y ,'x' ))
+    # def all_pass_zero_poles_plot(self , zeros , poles):
+    #     self.clear_all()
+    #     for zero in zeros:
+    #         self.zeros.append(DraggablePoint(self.c.axes,self ,  zero.x, zero.y ,'o' ))
+    #     for pole in poles:
+    #         self.poles.append(DraggablePoint(self.c.axes,self ,  pole.x, pole.y ,'x' ))
 
     def play_animation(self):
-        self.ui.grph_2.clear()
-        self.ui.grph_1.clear()
+        self.ui.grph_output_sig.clear()
+        self.ui.grph_input_sig.clear()
         print("animation playing")
         self.animation_timer.timeout.connect(lambda:self.update_plot_with_time(self.data_y))
-        self.data_line = self.ui.grph_1.plotItem.plot( pen="r")
-        self.data_line_filter = self.ui.grph_2.plotItem.plot(pen = 'r')
+        self.data_line = self.ui.grph_input_sig.plotItem.plot( pen="r")
+        self.data_line_filter = self.ui.grph_output_sig.plotItem.plot(pen = 'r')
         self.animation_timer.start(30)
         # self.is_animation_running = True
         self.current_index = 0
-        self.create_filter_from_z_p()
-        
+        # self.create_filter_from_z_p()
+        self.filtered_signal_new = []
+        z = self.apply_filter()
+    
+    def apply_filter(self ):
+        zeros , poles = self.get_zeros_poles()
+        allpass_zeros , allpass_poles = self.allpass_z_p()
+        a, b = signal.zpk2tf(zeros+allpass_zeros, poles+allpass_poles, 1)
+        self.filtered_signal = np.real(signal.lfilter(a, b, self.data_y))
+        # return np.real(signal.lfilter(a, b, points))
+    
     def update_plot_with_time(self , data):
         # self.animation_speed = 1
         
-        self.data_line.setData(self.data_x[0:self.current_index] , self.data_y[0:self.current_index])
-        self.data_line_filter.setData(self.data_x[0:self.current_index] , self.filtered_signal[0:self.current_index])
-        self.ui.grph_1.autoRange()
-        self.ui.grph_1.autoRange()
+        # self.data_line.setData(self.data_x[0:self.current_index] , self.data_y[0:self.current_index])
+        # self.data_line_filter.setData(self.data_x[0:self.current_index] , self.filtered_signal[0:self.current_index])
+        # self.ui.grph_output_sig.plot( self.filtered_signal[0:self.current_index])
+        self.ui.grph_input_sig.plot( self.data_y[0:self.current_index])
+        # self.create_filter_from_z_p()
+        # filtered = self.apply_filter(self.data_y[self.current_index :self.current_index+5])
+        # self.filtered_signal_new.extend(filtered)
+        self.ui.grph_output_sig.plot( self.filtered_signal[0:self.current_index])
+        # self.ui.grph_output_sig.plot( self.filtered_signal_new)
+        # self.ui.grph_input_sig.autoRange()
+        # self.ui.grph_output_sig.autoRange()
        
         if self.current_index >= len(data)-1:
             self.is_signal_ended = True
             
         
-        self.current_index += self.animation_speed # Convert the speed value to integer
+        self.current_index += 5 # Convert the speed value to integer
+        # self.current_index += self.animation_speed # Convert the speed value to integer
         # QApplication.processEvents()
             
     def open_file(self):
@@ -423,15 +487,106 @@ class MyWindow(QMainWindow):
         df = np.genfromtxt(file_path, delimiter = ',')
         self.data_x = df[:, 0].tolist()
         self.data_y = df[:, 1].tolist()
-        self.ui.grph_1.clear()
-        self.ui.grph_2.clear()
-        self.ui.grph_1.plot(self.data_x[0:self.current_index],  self.data_y[0:self.current_index])
+        self.ui.grph_input_sig.clear()
+        self.ui.grph_output_sig.clear()
+        # self.ui.grph_input_sig.plot(self.data_x[0:self.current_index],  self.data_y[0:self.current_index])
 
         self.play_animation()
     
-    # def signal_gen_via_mouse(self):
-    #     self.signal_gen = self.ui.padding_area.mouseMoveEvent()
+    def allpass_z_p(self ):
+        zeros=[]
+        poles=[]
+        checked_coeff = self.get_coffs()
+        for a in checked_coeff:
+            a = complex(a)
+            # a.real = np.abs(a.real)
+            # x = np.abs(a)
+            if a ==1:
+                continue
+            poles.append(a)
+            zero=(1/np.abs(a))*np.exp(1j*np.angle(a))
+            # zero = a.conjugate()
+            # zero = complex(np.real(a)-np.imag(a))
+            zeros.append(complex(zero))
+        return zeros, poles
         
+        
+        # zeros=[]
+        # poles=[]
+        # checked_coeff = self.get_coffs()
+        # w, all_pass_phs = 0, 0
+
+        # for a in checked_coeff:
+        #     if a ==1:
+        #         a= 0.99999999
+        #     a = complex(a, 0)
+            
+            
+        #     # Check if denominator is not zero before performing division
+        #     if np.abs(a.real) > 0:
+        #         a_conj = 1 / np.conj(a)
+
+        #         w, h = signal.freqz([-np.conj(a), 1.0], [1.0, -a])
+        #         all_pass_phs = np.add(np.angle(h), all_pass_phs)
+                
+        #         # Add points to lists
+        #         poles.append(complex(a.real+ a.imag))
+        #         zeros.append(complex(a_conj.real+ a_conj.imag))
+        # return zeros , poles
+        #         # self.all_pass_poles.append(pg.Point(a.real, a.imag))
+                # self.all_pass_zeros.append(pg.Point(a_conj.real, a_conj.imag))
+                
+        
+        
+        
+        
+        
+    
+    def allpass_response(self):
+        self.plot_allpass_zeros_poles()
+        zeros , poles = self.allpass_z_p()
+      
+        system = signal.TransferFunction(np.poly(zeros), np.poly(poles))
+        frequencies, response = signal.freqz(system.num, system.den)
+        self.ui.grph_4.clear()
+        phase_plot = self.ui.grph_4.plot(frequencies, np.angle(response, deg=True))
+        phase_plot.setPen('r')
+        
+    def plot_allpass_zeros_poles(self):
+        zeros , poles = self.allpass_z_p()
+        for point in self.zeros_allpass:
+            if point  != None:
+                point.point.remove()
+        for point in self.poles_allpass:
+            if point  != None:
+                point.point.remove()
+        self.zeros_allpass.clear()
+        self.poles_allpass.clear()
+        # self.zeros_allpass.append(DraggablePoint(self.c.axes, self, 0 , 0 , 'o').on_release())
+        for zero in zeros:
+            self.zeros_allpass.append(DraggablePoint(self.c.axes, self, np.real(zero) , np.imag(zero) , 'o'))
+        for pole in poles:
+            self.poles_allpass.append(DraggablePoint(self.c.axes, self, np.imag(pole) , np.real(pole) , 'x'))
+        # self.zeros_allpass[0].on_release()
+        self.circle.figure.canvas.draw()
+
+    
+    def get_coffs(self):
+        checked_coeff=[]
+        for row in range(self.ui.tbl_allpass_list.rowCount()):
+            if row == 5:
+                continue
+            item = self.ui.tbl_allpass_list.item(row, 0)  # Get item in the first column of the current row
+            coff = complex(item.text())
+            if item.checkState() == Qt.Checked:
+                checked_coeff.append(coff)
+            
+        print(checked_coeff)
+        return checked_coeff
+        
+            
+            # if item is not None:
+    
 def main():
     app = QApplication(sys.argv)
     window = MyWindow() 
